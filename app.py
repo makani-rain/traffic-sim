@@ -1,6 +1,3 @@
-'''
-PROTOTYPE
-'''
 
 import heapq
 import json
@@ -20,7 +17,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # -------------------------------
 # Map and Route Planning Classes
 # -------------------------------
-
 class TrafficMap:
     """
     Represents the road network as a weighted undirected graph.
@@ -41,7 +37,6 @@ class TrafficMap:
     def shortest_path(self, start, goal):
         """
         Computes the shortest path from start to goal using Dijkstra's algorithm.
-        (This mimics the baseline LLM decision-making.)
         """
         if start == goal:
             return [start]
@@ -65,7 +60,6 @@ class TrafficMap:
 # -------------------------------
 # Traveler Request and Agent Classes
 # -------------------------------
-
 class TravelerRequest:
     """
     Contains the details for a traveler's journey.
@@ -99,8 +93,9 @@ def create_map_prompt(traffic_map: TrafficMap, req: TravelerRequest) -> str:
         f"  Vehicle type: {req.vehicle_type}\n"
         f"  Start: {req.start}\n"
         f"  Destination: {req.destination}\n\n"
-        "Based on the above map and traveler details, please provide the best route as a JSON array of node names. "
-        "For example: [\"A\", \"B\", \"C\"]. Provide only the JSON array and no additional commentary."
+        "Based on the above map and traveler details, please provide the best route as a JSON array of node names."
+        "Pay special attention to speed, where higher weights take longer to traverse, and also congestion predictions."
+        "Example output: [\"A\", \"B\", \"C\"]. Provide only the JSON array and no additional commentary."
     )
     return prompt
 
@@ -164,9 +159,7 @@ class Agent:
                 ],
                 temperature=0.0,
             )
-            # Use attribute access instead of subscripting.
             answer = response.choices[0].message.content
-            # Try to extract a JSON array containing the route.
             json_array = re.search(r'\[.*\]', answer, re.DOTALL)
             if json_array:
                 route = json.loads(json_array.group())
@@ -205,7 +198,6 @@ class Agent:
 # -------------------------------
 # Simulation and Evaluation Classes
 # -------------------------------
-
 class TrafficSimulation:
     """
     Orchestrates the overall simulation. Holds the map and agents and provides a 
@@ -242,21 +234,19 @@ class TrafficSimulation:
         return congestion_metric, edge_usage
 
 
-# -------------------------------
-# Animation and Saving as GIF
-# -------------------------------
-
 def save_animation(simulation: TrafficSimulation, filename='simulation.gif'):
     """
     Creates an animated visualization of the simulation using FuncAnimation and saves
     the output as a GIF using the Pillow writer.
     """
-    # Build a NetworkX graph from the traffic map.
     G = nx.Graph()
     for node, neighbors in simulation.traffic_map.graph.items():
         for neighbor, weight in neighbors:
             G.add_edge(node, neighbor, weight=weight)
-    pos = nx.spring_layout(G, seed=42)
+    
+    # Choose layout algorithm
+    # pos = nx.spring_layout(G, seed=42)
+    pos = nx.kamada_kawai_layout(G)
 
     # Determine total simulation time and number of frames.
     t_end = max((agent.total_time for agent in simulation.agents), default=0)
@@ -268,28 +258,43 @@ def save_animation(simulation: TrafficSimulation, filename='simulation.gif'):
     cong_values = [simulation.compute_congestion_at_time(t)[0] for t in time_steps]
 
     # Set up figure and subplots.
-    fig, (ax_map, ax_cong) = plt.subplots(1, 2, figsize=(14, 6))
-    plt.subplots_adjust(left=0.1, bottom=0.15, right=0.95, top=0.9, wspace=0.3)
+    fig, (ax_map, ax_cong) = plt.subplots(1, 2, figsize=(14, 7))
+    plt.subplots_adjust(left=0.1, bottom=0.2, right=0.95, top=0.9, wspace=0.4)
 
     # --- Left Axes: Traffic Map ---
     ax_map.set_title("Traffic Map with Agent Positions")
-    nx.draw_networkx_nodes(G, pos, ax=ax_map, node_size=600, node_color="lightblue")
-    nx.draw_networkx_edges(G, pos, ax=ax_map, width=2)
-    nx.draw_networkx_labels(G, pos, ax=ax_map, font_size=12, font_color="black")
+    
+    # Group edges by weight for better visualization
+    edges = G.edges(data=True)
+    short_edges = [(u, v) for u, v, d in edges if d['weight'] <= 1]
+    medium_edges = [(u, v) for u, v, d in edges if 1 < d['weight'] <= 2]
+    long_edges = [(u, v) for u, v, d in edges if d['weight'] > 2]
+    
+    # Draw nodes
+    nx.draw_networkx_nodes(G, pos, ax=ax_map, node_size=500, node_color='lightblue', edgecolors='black')
+    nx.draw_networkx_labels(G, pos, ax=ax_map, font_size=8)
+    
+    # Draw edges with color coding
+    nx.draw_networkx_edges(G, pos, ax=ax_map, edgelist=short_edges, width=2, edge_color='green', label='Weight <= 1')
+    nx.draw_networkx_edges(G, pos, ax=ax_map, edgelist=medium_edges, width=2, edge_color='orange', label='1 < Weight <= 2')
+    nx.draw_networkx_edges(G, pos, ax=ax_map, edgelist=long_edges, width=2, edge_color='red', label='Weight > 2')
+    
+    # Add edge labels for weights
     edge_labels = nx.get_edge_attributes(G, 'weight')
-    nx.draw_networkx_edge_labels(G, pos, ax=ax_map, edge_labels=edge_labels)
+    nx.draw_networkx_edge_labels(G, pos, ax=ax_map, edge_labels=edge_labels, font_size=6)
 
     # Initialize agent markers with unique colors.
     colors = ['red', 'green', 'blue', 'orange', 'purple', 'cyan', 'magenta']
     agent_markers = []
     for idx, agent in enumerate(simulation.agents):
         init_pos = agent.position_at_time(0, pos)
-        marker, = ax_map.plot([init_pos[0]], [init_pos[1]], 'o', ms=12,
-                                color=colors[idx % len(colors)], label=f"Agent {idx+1}")
+        marker, = ax_map.plot([init_pos[0]], [init_pos[1]], 'o', ms=10,
+                              color=colors[idx % len(colors)], label=f"Agent {idx + 1}")
         agent_markers.append(marker)
-        ax_map.text(init_pos[0], init_pos[1] + 0.05, f"{idx+1}",
-                    color=colors[idx % len(colors)], fontweight="bold")
-    ax_map.legend()
+
+    # Add a legend to the map
+    # ax_map.legend(loc='best', fontsize=8)
+    ax_map.axis('off')
 
     # --- Right Axes: Congestion Plot ---
     ax_cong.set_title("Congestion Over Time")
@@ -330,41 +335,227 @@ def save_animation(simulation: TrafficSimulation, filename='simulation.gif'):
     print(f"Animation saved as {filename}")
     plt.close(fig)
 
-
 # -------------------------------
 # Main: Creating the Simulation and Saving GIFs
 # -------------------------------
-
 if __name__ == "__main__":
-    # Create a simple map layout.
+    # Map layout creation
     traffic_map = TrafficMap()
-    traffic_map.add_edge("A", "B", 1)
-    traffic_map.add_edge("B", "C", 1)
-    traffic_map.add_edge("C", "D", 1)
-    traffic_map.add_edge("A", "D", 4)
-    traffic_map.add_edge("B", "D", 2)
-
+    traffic_map.add_edge('A', 'B', 1)
+    traffic_map.add_edge('A', 'D', 1)
+    traffic_map.add_edge('A', 'M', 3)
+    traffic_map.add_edge('B', 'E', 1)
+    traffic_map.add_edge('B', 'C', 1)
+    traffic_map.add_edge('C', 'N', 0.5)
+    traffic_map.add_edge('C', 'O', 0.5)
+    traffic_map.add_edge('C', 'F', 1)
+    traffic_map.add_edge('N', 'F', 0.5)
+    traffic_map.add_edge('N', 'O', 0.5)
+    traffic_map.add_edge('F', 'O', 0.5)
+    traffic_map.add_edge('D', 'E', 1)
+    traffic_map.add_edge('D', 'G', 1)
+    traffic_map.add_edge('E', 'F', 1)
+    traffic_map.add_edge('E', 'H', 1)
+    traffic_map.add_edge('G', 'H', 1)
+    traffic_map.add_edge('G', 'J', 1)
+    traffic_map.add_edge('M', 'J', 1)
+    traffic_map.add_edge('K', 'J', 1)
+    traffic_map.add_edge('K', 'H', 1)
+    traffic_map.add_edge('K', 'L', 1)
+    traffic_map.add_edge('M', 'L', 2)
+    traffic_map.add_edge('M', 'I', 4)
+    traffic_map.add_edge('L', 'I', 1)
+    traffic_map.add_edge('H', 'I', 1)
+    traffic_map.add_edge('F', 'I', 1)
+    traffic_map.add_edge('F', 'P', 0.5)
+    traffic_map.add_edge('F', 'P', 0.5)
+    traffic_map.add_edge('H', 'P', 0.5)
+    traffic_map.add_edge('H', 'Q', 0.5)
+    traffic_map.add_edge('I', 'Q', 0.5)
+    
     # Define traveler requests.
     traveler1 = TravelerRequest(vehicle_type="car", start="A", destination="D")
     traveler2 = TravelerRequest(vehicle_type="car", start="A", destination="D")
     traveler3 = TravelerRequest(vehicle_type="truck", start="B", destination="C")
     traveler4 = TravelerRequest(vehicle_type="car", start="D", destination="C")
     traveler5 = TravelerRequest(vehicle_type="car", start="B", destination="D")
+    traveler6 = TravelerRequest(vehicle_type="car", start="E", destination="D")
+    traveler7 = TravelerRequest(vehicle_type="car", start="D", destination="F")
+    traveler8 = TravelerRequest(vehicle_type="car", start="D", destination="A")
+    traveler9 = TravelerRequest(vehicle_type="car", start="G", destination="C")
+    traveler10 = TravelerRequest(vehicle_type="car", start="A", destination="G")
 
-    # --- Option 1: Baseline using Shortest Path ---
+    traveler11 = TravelerRequest(vehicle_type="car", start="A", destination="B")
+    traveler12 = TravelerRequest(vehicle_type="car", start="A", destination="C")
+    traveler13 = TravelerRequest(vehicle_type="car", start="A", destination="D")
+    traveler14 = TravelerRequest(vehicle_type="car", start="A", destination="E")
+    traveler15 = TravelerRequest(vehicle_type="car", start="A", destination="F")
+    traveler16 = TravelerRequest(vehicle_type="car", start="A", destination="G")
+    traveler17 = TravelerRequest(vehicle_type="car", start="A", destination="H")
+    traveler18 = TravelerRequest(vehicle_type="car", start="A", destination="I")
+    traveler19 = TravelerRequest(vehicle_type="car", start="A", destination="J")
+    traveler20 = TravelerRequest(vehicle_type="car", start="A", destination="K")
+    traveler21 = TravelerRequest(vehicle_type="car", start="A", destination="L")
+    traveler22 = TravelerRequest(vehicle_type="car", start="A", destination="M")
+    traveler23 = TravelerRequest(vehicle_type="car", start="A", destination="N")
+    traveler24 = TravelerRequest(vehicle_type="car", start="A", destination="O")
+    traveler25 = TravelerRequest(vehicle_type="car", start="A", destination="P")
+    traveler26 = TravelerRequest(vehicle_type="car", start="A", destination="Q")
+
+    traveler27 = TravelerRequest(vehicle_type="car", start="K", destination="A")
+    traveler28 = TravelerRequest(vehicle_type="car", start="K", destination="B")
+    traveler29 = TravelerRequest(vehicle_type="car", start="K", destination="C")
+    traveler30 = TravelerRequest(vehicle_type="car", start="K", destination="D")
+    traveler31 = TravelerRequest(vehicle_type="car", start="K", destination="E")
+    traveler32 = TravelerRequest(vehicle_type="car", start="K", destination="F")
+    traveler33 = TravelerRequest(vehicle_type="car", start="K", destination="G")
+    traveler34 = TravelerRequest(vehicle_type="car", start="K", destination="H")
+    traveler35 = TravelerRequest(vehicle_type="car", start="K", destination="I")
+    traveler36 = TravelerRequest(vehicle_type="car", start="K", destination="J")
+    traveler37 = TravelerRequest(vehicle_type="car", start="K", destination="L")
+    traveler38 = TravelerRequest(vehicle_type="car", start="K", destination="M")
+    traveler39 = TravelerRequest(vehicle_type="car", start="K", destination="N")
+    traveler40 = TravelerRequest(vehicle_type="car", start="K", destination="O")
+    traveler41 = TravelerRequest(vehicle_type="car", start="K", destination="P")
+    traveler42 = TravelerRequest(vehicle_type="car", start="K", destination="Q")
+
+    traveler43 = TravelerRequest(vehicle_type="car", start="O", destination="A")
+    traveler44 = TravelerRequest(vehicle_type="car", start="O", destination="B")
+    traveler45 = TravelerRequest(vehicle_type="car", start="O", destination="C")
+    traveler46 = TravelerRequest(vehicle_type="car", start="O", destination="D")
+    traveler47 = TravelerRequest(vehicle_type="car", start="O", destination="E")
+    traveler48 = TravelerRequest(vehicle_type="car", start="O", destination="F")
+    traveler49 = TravelerRequest(vehicle_type="car", start="O", destination="G")
+    traveler50 = TravelerRequest(vehicle_type="car", start="O", destination="H")
+    traveler51 = TravelerRequest(vehicle_type="car", start="O", destination="I")
+    traveler52 = TravelerRequest(vehicle_type="car", start="O", destination="J")
+    traveler53 = TravelerRequest(vehicle_type="car", start="O", destination="K")
+    traveler54 = TravelerRequest(vehicle_type="car", start="O", destination="L")
+    traveler55 = TravelerRequest(vehicle_type="car", start="O", destination="M")
+    traveler56 = TravelerRequest(vehicle_type="car", start="O", destination="N")
+    traveler57 = TravelerRequest(vehicle_type="car", start="O", destination="P")
+    traveler58 = TravelerRequest(vehicle_type="car", start="O", destination="Q")
+
+    # Baseline using Shortest Path
     simulation_baseline = TrafficSimulation(traffic_map)
     simulation_baseline.add_agent(traveler1, plan_method="shortest_path")
     simulation_baseline.add_agent(traveler2, plan_method="shortest_path")
     simulation_baseline.add_agent(traveler3, plan_method="shortest_path")
     simulation_baseline.add_agent(traveler4, plan_method="shortest_path")
     simulation_baseline.add_agent(traveler5, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler6, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler7, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler8, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler9, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler10, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler11, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler12, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler13, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler14, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler15, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler16, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler17, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler18, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler19, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler20, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler21, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler22, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler23, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler24, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler25, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler26, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler27, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler28, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler29, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler30, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler31, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler32, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler33, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler34, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler35, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler36, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler37, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler38, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler39, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler40, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler41, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler42, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler43, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler44, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler45, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler46, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler47, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler48, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler49, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler50, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler51, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler52, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler53, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler54, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler55, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler56, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler57, plan_method="shortest_path")
+    simulation_baseline.add_agent(traveler58, plan_method="shortest_path")
     save_animation(simulation_baseline, filename="traffic_simulation_shortest.gif")
 
-    # --- Option 2: Using the OpenAI LLM for route planning ---
+    # Use the OpenAI LLM for route planning
     simulation_llm = TrafficSimulation(traffic_map)
     simulation_llm.add_agent(traveler1, plan_method="llm")
     simulation_llm.add_agent(traveler2, plan_method="llm")
     simulation_llm.add_agent(traveler3, plan_method="llm")
     simulation_llm.add_agent(traveler4, plan_method="llm")
     simulation_llm.add_agent(traveler5, plan_method="llm")
+    simulation_llm.add_agent(traveler6, plan_method="llm")
+    simulation_llm.add_agent(traveler7, plan_method="llm")
+    simulation_llm.add_agent(traveler8, plan_method="llm")
+    simulation_llm.add_agent(traveler9, plan_method="llm")
+    simulation_llm.add_agent(traveler10, plan_method="llm")
+    simulation_llm.add_agent(traveler11, plan_method="llm")
+    simulation_llm.add_agent(traveler12, plan_method="llm")
+    simulation_llm.add_agent(traveler13, plan_method="llm")
+    simulation_llm.add_agent(traveler14, plan_method="llm")
+    simulation_llm.add_agent(traveler15, plan_method="llm")
+    simulation_llm.add_agent(traveler16, plan_method="llm")
+    simulation_llm.add_agent(traveler17, plan_method="llm")
+    simulation_llm.add_agent(traveler18, plan_method="llm")
+    simulation_llm.add_agent(traveler19, plan_method="llm")
+    simulation_llm.add_agent(traveler20, plan_method="llm")
+    simulation_llm.add_agent(traveler21, plan_method="llm")
+    simulation_llm.add_agent(traveler22, plan_method="llm")
+    simulation_llm.add_agent(traveler23, plan_method="llm")
+    simulation_llm.add_agent(traveler24, plan_method="llm")
+    simulation_llm.add_agent(traveler25, plan_method="llm")
+    simulation_llm.add_agent(traveler26, plan_method="llm")
+    simulation_llm.add_agent(traveler27, plan_method="llm")
+    simulation_llm.add_agent(traveler28, plan_method="llm")
+    simulation_llm.add_agent(traveler29, plan_method="llm")
+    simulation_llm.add_agent(traveler30, plan_method="llm")
+    simulation_llm.add_agent(traveler31, plan_method="llm")
+    simulation_llm.add_agent(traveler32, plan_method="llm")
+    simulation_llm.add_agent(traveler33, plan_method="llm")
+    simulation_llm.add_agent(traveler34, plan_method="llm")
+    simulation_llm.add_agent(traveler35, plan_method="llm")
+    simulation_llm.add_agent(traveler36, plan_method="llm")
+    simulation_llm.add_agent(traveler37, plan_method="llm")
+    simulation_llm.add_agent(traveler38, plan_method="llm")
+    simulation_llm.add_agent(traveler39, plan_method="llm")
+    simulation_llm.add_agent(traveler40, plan_method="llm")
+    simulation_llm.add_agent(traveler41, plan_method="llm")
+    simulation_llm.add_agent(traveler42, plan_method="llm")
+    simulation_llm.add_agent(traveler43, plan_method="llm")
+    simulation_llm.add_agent(traveler44, plan_method="llm")
+    simulation_llm.add_agent(traveler45, plan_method="llm")
+    simulation_llm.add_agent(traveler46, plan_method="llm")
+    simulation_llm.add_agent(traveler47, plan_method="llm")
+    simulation_llm.add_agent(traveler48, plan_method="llm")
+    simulation_llm.add_agent(traveler49, plan_method="llm")
+    simulation_llm.add_agent(traveler50, plan_method="llm")
+    simulation_llm.add_agent(traveler51, plan_method="llm")
+    simulation_llm.add_agent(traveler52, plan_method="llm")
+    simulation_llm.add_agent(traveler53, plan_method="llm")
+    simulation_llm.add_agent(traveler54, plan_method="llm")
+    simulation_llm.add_agent(traveler55, plan_method="llm")
+    simulation_llm.add_agent(traveler56, plan_method="llm")
+    simulation_llm.add_agent(traveler57, plan_method="llm")
+    simulation_llm.add_agent(traveler58, plan_method="llm")
     save_animation(simulation_llm, filename="traffic_simulation_llm.gif")
