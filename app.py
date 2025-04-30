@@ -105,7 +105,8 @@ class Agent:
     Represents an agent (traveler/vehicle). The agent plans its route based on its traveler
     request by either using the baseline shortest path or via an LLM.
     """
-    def __init__(self, request: TravelerRequest):
+    def __init__(self, name: str, request: TravelerRequest):
+        self.name = name
         self.request = request
         self.route = None        # List of nodes that form the route.
         self.schedule = []       # List of segments with time intervals.
@@ -207,14 +208,14 @@ class TrafficSimulation:
         self.traffic_map = traffic_map
         self.agents = []
 
-    def add_agent(self, traveler_request: TravelerRequest, plan_method="shortest_path"):
+    def add_agent(self, agent_name: str, traveler_request: TravelerRequest, plan_method="shortest_path"):
         """
         Create a new agent from the traveler request using the specified planning method
         (either "shortest_path" for baseline or "llm" to use the OpenAI LLM) and add it to the simulation.
         """
-        agent = Agent(traveler_request)
+        agent = Agent(agent_name, traveler_request)
         agent.plan_route(self.traffic_map, method=plan_method)
-        self.agents.append(agent)
+        self.add_planned_agent(agent)
 
     def compute_congestion_at_time(self, t):
         """
@@ -232,6 +233,16 @@ class TrafficSimulation:
                     break
         congestion_metric = sum(max(0, count - 1) for count in edge_usage.values())
         return congestion_metric, edge_usage
+
+    def get_agent_by_name(self, agent_name: str):
+        """
+        Finds the agent in the TrafficSimulation's list of agents based on name.
+        """
+        for agent in self.agents:
+            if agent.name == agent_name:
+                return agent
+        return None
+        
 
 
 def save_animation(simulation: TrafficSimulation, filename='simulation.gif'):
@@ -335,6 +346,30 @@ def save_animation(simulation: TrafficSimulation, filename='simulation.gif'):
     print(f"Animation saved as {filename}")
     plt.close(fig)
 
+def compare_route_planning(traffic_map: TrafficMap, traveler_request: TravelerRequest):
+    """
+    Compares the total travel time for the shortest-path algorithm and the OpenAI LLM approach.
+    """
+    # Create and plan agents using both methods
+    shortest_path_agent = Agent("ShortestPathAgent", traveler_request)
+    shortest_path_agent.plan_route(traffic_map, method="shortest_path")
+
+    llm_agent = Agent("LLMAgent", traveler_request)
+    llm_agent.plan_route(traffic_map, method="llm")
+
+    # Print the results
+    print("Comparison of Travel Time:")
+    print(f"Shortest-path travel time: {shortest_path_agent.total_time}")
+    print(f"LLM-based travel time: {llm_agent.total_time}")
+
+    # Optional: Check which method was faster
+    if shortest_path_agent.total_time < llm_agent.total_time:
+        print("Shortest-path algorithm was faster.")
+    elif shortest_path_agent.total_time > llm_agent.total_time:
+        print("LLM-based planning was faster.")
+    else:
+        print("Both methods resulted in the same travel time.")
+    
 # -------------------------------
 # Main: Creating the Simulation and Saving GIFs
 # -------------------------------
@@ -438,124 +473,127 @@ if __name__ == "__main__":
 
     # Baseline using Shortest Path
     simulation_baseline = TrafficSimulation(traffic_map)
-    simulation_baseline.add_agent(traveler1, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler2, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler3, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler4, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler5, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler6, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler7, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler8, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler9, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler10, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler11, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler12, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler13, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler14, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler15, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler16, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler17, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler18, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler19, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler20, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler21, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler22, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler23, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler24, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler25, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler26, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler27, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler28, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler29, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler30, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler31, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler32, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler33, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler34, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler35, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler36, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler37, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler38, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler39, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler40, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler41, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler42, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler43, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler44, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler45, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler46, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler47, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler48, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler49, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler50, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler51, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler52, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler53, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler54, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler55, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler56, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler57, plan_method="shortest_path")
-    simulation_baseline.add_agent(traveler58, plan_method="shortest_path")
-    save_animation(simulation_baseline, filename="traffic_simulation_shortest.gif")
+    simulation_baseline.add_agent("traveler1", traveler1, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler2", traveler2, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler3", traveler3, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler4", traveler4, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler5", traveler5, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler6", traveler6, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler7", traveler7, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler8", traveler8, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler9", traveler9, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler10", traveler10, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler11", traveler11, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler12", traveler12, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler13", traveler13, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler14", traveler14, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler15", traveler15, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler16", traveler16, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler17", traveler17, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler18", traveler18, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler19", traveler19, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler20", traveler20, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler21", traveler21, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler22", traveler22, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler23", traveler23, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler24", traveler24, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler25", traveler25, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler26", traveler26, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler27", traveler27, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler28", traveler28, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler29", traveler29, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler30", traveler30, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler31", traveler31, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler32", traveler32, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler33", traveler33, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler34", traveler34, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler35", traveler35, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler36", traveler36, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler37", traveler37, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler38", traveler38, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler39", traveler39, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler40", traveler40, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler41", traveler41, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler42", traveler42, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler43", traveler43, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler44", traveler44, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler45", traveler45, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler46", traveler46, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler47", traveler47, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler48", traveler48, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler49", traveler49, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler50", traveler50, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler51", traveler51, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler52", traveler52, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler53", traveler53, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler54", traveler54, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler55", traveler55, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler56", traveler56, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler57", traveler57, plan_method="shortest_path")
+    simulation_baseline.add_agent("traveler58", traveler58, plan_method="shortest_path")
+    save_animation(simulation_baseline, filename="traffic_simulation_shortest-1.gif")
 
     # Use the OpenAI LLM for route planning
     simulation_llm = TrafficSimulation(traffic_map)
-    simulation_llm.add_agent(traveler1, plan_method="llm")
-    simulation_llm.add_agent(traveler2, plan_method="llm")
-    simulation_llm.add_agent(traveler3, plan_method="llm")
-    simulation_llm.add_agent(traveler4, plan_method="llm")
-    simulation_llm.add_agent(traveler5, plan_method="llm")
-    simulation_llm.add_agent(traveler6, plan_method="llm")
-    simulation_llm.add_agent(traveler7, plan_method="llm")
-    simulation_llm.add_agent(traveler8, plan_method="llm")
-    simulation_llm.add_agent(traveler9, plan_method="llm")
-    simulation_llm.add_agent(traveler10, plan_method="llm")
-    simulation_llm.add_agent(traveler11, plan_method="llm")
-    simulation_llm.add_agent(traveler12, plan_method="llm")
-    simulation_llm.add_agent(traveler13, plan_method="llm")
-    simulation_llm.add_agent(traveler14, plan_method="llm")
-    simulation_llm.add_agent(traveler15, plan_method="llm")
-    simulation_llm.add_agent(traveler16, plan_method="llm")
-    simulation_llm.add_agent(traveler17, plan_method="llm")
-    simulation_llm.add_agent(traveler18, plan_method="llm")
-    simulation_llm.add_agent(traveler19, plan_method="llm")
-    simulation_llm.add_agent(traveler20, plan_method="llm")
-    simulation_llm.add_agent(traveler21, plan_method="llm")
-    simulation_llm.add_agent(traveler22, plan_method="llm")
-    simulation_llm.add_agent(traveler23, plan_method="llm")
-    simulation_llm.add_agent(traveler24, plan_method="llm")
-    simulation_llm.add_agent(traveler25, plan_method="llm")
-    simulation_llm.add_agent(traveler26, plan_method="llm")
-    simulation_llm.add_agent(traveler27, plan_method="llm")
-    simulation_llm.add_agent(traveler28, plan_method="llm")
-    simulation_llm.add_agent(traveler29, plan_method="llm")
-    simulation_llm.add_agent(traveler30, plan_method="llm")
-    simulation_llm.add_agent(traveler31, plan_method="llm")
-    simulation_llm.add_agent(traveler32, plan_method="llm")
-    simulation_llm.add_agent(traveler33, plan_method="llm")
-    simulation_llm.add_agent(traveler34, plan_method="llm")
-    simulation_llm.add_agent(traveler35, plan_method="llm")
-    simulation_llm.add_agent(traveler36, plan_method="llm")
-    simulation_llm.add_agent(traveler37, plan_method="llm")
-    simulation_llm.add_agent(traveler38, plan_method="llm")
-    simulation_llm.add_agent(traveler39, plan_method="llm")
-    simulation_llm.add_agent(traveler40, plan_method="llm")
-    simulation_llm.add_agent(traveler41, plan_method="llm")
-    simulation_llm.add_agent(traveler42, plan_method="llm")
-    simulation_llm.add_agent(traveler43, plan_method="llm")
-    simulation_llm.add_agent(traveler44, plan_method="llm")
-    simulation_llm.add_agent(traveler45, plan_method="llm")
-    simulation_llm.add_agent(traveler46, plan_method="llm")
-    simulation_llm.add_agent(traveler47, plan_method="llm")
-    simulation_llm.add_agent(traveler48, plan_method="llm")
-    simulation_llm.add_agent(traveler49, plan_method="llm")
-    simulation_llm.add_agent(traveler50, plan_method="llm")
-    simulation_llm.add_agent(traveler51, plan_method="llm")
-    simulation_llm.add_agent(traveler52, plan_method="llm")
-    simulation_llm.add_agent(traveler53, plan_method="llm")
-    simulation_llm.add_agent(traveler54, plan_method="llm")
-    simulation_llm.add_agent(traveler55, plan_method="llm")
-    simulation_llm.add_agent(traveler56, plan_method="llm")
-    simulation_llm.add_agent(traveler57, plan_method="llm")
-    simulation_llm.add_agent(traveler58, plan_method="llm")
-    save_animation(simulation_llm, filename="traffic_simulation_llm.gif")
+    simulation_llm.add_agent("traveler1", traveler1, plan_method="llm")
+    simulation_llm.add_agent("traveler2", traveler2, plan_method="llm")
+    simulation_llm.add_agent("traveler3", traveler3, plan_method="llm")
+    simulation_llm.add_agent("traveler4", traveler4, plan_method="llm")
+    simulation_llm.add_agent("traveler5", traveler5, plan_method="llm")
+    simulation_llm.add_agent("traveler6", traveler6, plan_method="llm")
+    simulation_llm.add_agent("traveler7", traveler7, plan_method="llm")
+    simulation_llm.add_agent("traveler8", traveler8, plan_method="llm")
+    simulation_llm.add_agent("traveler9", traveler9, plan_method="llm")
+    simulation_llm.add_agent("traveler10", traveler10, plan_method="llm")
+    simulation_llm.add_agent("traveler11", traveler11, plan_method="llm")
+    simulation_llm.add_agent("traveler12", traveler12, plan_method="llm")
+    simulation_llm.add_agent("traveler13", traveler13, plan_method="llm")
+    simulation_llm.add_agent("traveler14", traveler14, plan_method="llm")
+    simulation_llm.add_agent("traveler15", traveler15, plan_method="llm")
+    simulation_llm.add_agent("traveler16", traveler16, plan_method="llm")
+    simulation_llm.add_agent("traveler17", traveler17, plan_method="llm")
+    simulation_llm.add_agent("traveler18", traveler18, plan_method="llm")
+    simulation_llm.add_agent("traveler19", traveler19, plan_method="llm")
+    simulation_llm.add_agent("traveler20", traveler20, plan_method="llm")
+    simulation_llm.add_agent("traveler21", traveler21, plan_method="llm")
+    simulation_llm.add_agent("traveler22", traveler22, plan_method="llm")
+    simulation_llm.add_agent("traveler23", traveler23, plan_method="llm")
+    simulation_llm.add_agent("traveler24", traveler24, plan_method="llm")
+    simulation_llm.add_agent("traveler25", traveler25, plan_method="llm")
+    simulation_llm.add_agent("traveler26", traveler26, plan_method="llm")
+    simulation_llm.add_agent("traveler27", traveler27, plan_method="llm")
+    simulation_llm.add_agent("traveler28", traveler28, plan_method="llm")
+    simulation_llm.add_agent("traveler29", traveler29, plan_method="llm")
+    simulation_llm.add_agent("traveler30", traveler30, plan_method="llm")
+    simulation_llm.add_agent("traveler31", traveler31, plan_method="llm")
+    simulation_llm.add_agent("traveler32", traveler32, plan_method="llm")
+    simulation_llm.add_agent("traveler33", traveler33, plan_method="llm")
+    simulation_llm.add_agent("traveler34", traveler34, plan_method="llm")
+    simulation_llm.add_agent("traveler35", traveler35, plan_method="llm")
+    simulation_llm.add_agent("traveler36", traveler36, plan_method="llm")
+    simulation_llm.add_agent("traveler37", traveler37, plan_method="llm")
+    simulation_llm.add_agent("traveler38", traveler38, plan_method="llm")
+    simulation_llm.add_agent("traveler39", traveler39, plan_method="llm")
+    simulation_llm.add_agent("traveler40", traveler40, plan_method="llm")
+    simulation_llm.add_agent("traveler41", traveler41, plan_method="llm")
+    simulation_llm.add_agent("traveler42", traveler42, plan_method="llm")
+    simulation_llm.add_agent("traveler43", traveler43, plan_method="llm")
+    simulation_llm.add_agent("traveler44", traveler44, plan_method="llm")
+    simulation_llm.add_agent("traveler45", traveler45, plan_method="llm")
+    simulation_llm.add_agent("traveler46", traveler46, plan_method="llm")
+    simulation_llm.add_agent("traveler47", traveler47, plan_method="llm")
+    simulation_llm.add_agent("traveler48", traveler48, plan_method="llm")
+    simulation_llm.add_agent("traveler49", traveler49, plan_method="llm")
+    simulation_llm.add_agent("traveler50", traveler50, plan_method="llm")
+    simulation_llm.add_agent("traveler51", traveler51, plan_method="llm")
+    simulation_llm.add_agent("traveler52", traveler52, plan_method="llm")
+    simulation_llm.add_agent("traveler53", traveler53, plan_method="llm")
+    simulation_llm.add_agent("traveler54", traveler54, plan_method="llm")
+    simulation_llm.add_agent("traveler55", traveler55, plan_method="llm")
+    simulation_llm.add_agent("traveler56", traveler56, plan_method="llm")
+    simulation_llm.add_agent("traveler57", traveler57, plan_method="llm")
+    simulation_llm.add_agent("traveler58", traveler58, plan_method="llm")
+    save_animation(simulation_llm, filename="traffic_simulation_llm-1.gif")
+    
+    
+    
