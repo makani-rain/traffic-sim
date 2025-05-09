@@ -161,7 +161,7 @@ class Agent:
 
         print("LLM route planning failed, falling back to shortest path")
         return self.plan_route_shortest_path(
-            self.request.start, self.request.destination
+            traffic_map, self.request.start, self.request.destination
         )
 
     def position_at_time(self, t, pos_dict):
@@ -518,7 +518,7 @@ def generate_graphs(simulation, congestion_track, filename: str, title: str):
     fig.update_yaxes(title_text="", row=1, col=1, showgrid=False, zeroline=False)
     fig.update_xaxes(title_text="Frame", row=1, col=2)
     fig.update_yaxes(title_text="Congestion", row=1, col=2)
-    pio.write_html(fig, file=filename, auto_open=True)
+    pio.write_html(fig, file=filename, auto_open=False)
 
 
 def run_simulation(simulation: TrafficSimulation, filename: str, title: str):
@@ -693,13 +693,8 @@ def prepare_sim_3(agent_count=20):
         traveler_requests.append(generate_traveler_request('A', 'G'))
     return traffic_map, traveler_requests
 
-if __name__ == "__main__":
 
-    # traffic_map, traveler_requests = prepare_sim_1(60)
-    # traffic_map, traveler_requests = prepare_sim_2(10)
-    traffic_map, traveler_requests = prepare_sim_3(20)
-
-
+def run_sim(traffic_map, traveler_requests, tag):
     titles = [
         "Shortest Path",
         "GPT 4o Mini",
@@ -707,9 +702,9 @@ if __name__ == "__main__":
     ]
 
     filenames = [
-        "traffic-sim-shortest-path-bottleneck.html",
-        "traffic-sim-gpt-4o-mini-bottleneck.html",
-        "traffic-sim-gpt-3-5-turbo-bottleneck.html",
+        f"out/traffic-sim-shortest-path-{tag}.html",
+        f"out/traffic-sim-gpt-4o-mini-{tag}.html",
+        f"out/traffic-sim-gpt-3-5-turbo-{tag}.html",
     ]
 
     print("=== SHORTEST PATH ===")
@@ -723,8 +718,10 @@ if __name__ == "__main__":
         congestion_impact = agent.actual_time - agent.planned_time
         congestion_impacts.append(congestion_impact)
 
-    print(f'Average Congestion Impact: {statistics.mean(congestion_impacts)}')
-    print(f'Median Congestion Impact: {statistics.median(congestion_impacts)}')
+    shortest_mean = statistics.mean(congestion_impacts)
+    shortest_median = statistics.median(congestion_impacts)
+    print(f'Average Congestion Impact: {shortest_mean}')
+    print(f'Median Congestion Impact: {shortest_median}')
 
     print("=== GPT 4o mini ===")
     simulation_gpt_4o_mini = TrafficSimulation(traffic_map)
@@ -737,8 +734,10 @@ if __name__ == "__main__":
         congestion_impact = agent.actual_time - agent.planned_time
         congestion_impacts.append(congestion_impact)
 
-    print(f'Average Congestion Impact: {statistics.mean(congestion_impacts)}')
-    print(f'Median Congestion Impact: {statistics.median(congestion_impacts)}')
+    gpt4o_mean = statistics.mean(congestion_impacts)
+    gpt4o_median = statistics.median(congestion_impacts)
+    print(f'Average Congestion Impact: {gpt4o_mean}')
+    print(f'Median Congestion Impact: {gpt4o_median}')
 
     print("=== GPT 3.5 turbo ===")
     simulation_gpt_35_turbo = TrafficSimulation(traffic_map)
@@ -751,5 +750,41 @@ if __name__ == "__main__":
         congestion_impact = agent.actual_time - agent.planned_time
         congestion_impacts.append(congestion_impact)
 
-    print(f'Average Congestion Impact: {statistics.mean(congestion_impacts)}')
-    print(f'Median Congestion Impact: {statistics.median(congestion_impacts)}')
+    gpt35_mean = statistics.mean(congestion_impacts)
+    gpt35_median = statistics.median(congestion_impacts)
+
+    print(f'Average Congestion Impact: {gpt35_mean}')
+    print(f'Median Congestion Impact: {gpt35_median}')
+
+    return {
+        "shortest_mean": shortest_mean,
+        "shortest_median": shortest_median,
+        "gpt4o_mean": gpt4o_mean,
+        "gpt4o_median": gpt4o_median,
+        "gpt35_mean": gpt35_mean,
+        "gpt35_median": gpt35_median,
+    }
+
+if __name__ == "__main__":
+
+    traffic_map, traveler_requests = prepare_sim_1(60)
+    for i in range(10):
+        results = run_sim(traffic_map, traveler_requests, f'sim1-{i}')
+        results['iteration'] = i
+        with open("out/sim1-results.txt", "a") as file:
+            file.write(str(results))
+
+    traffic_map, traveler_requests = prepare_sim_2(10)
+    for i in range(10):
+        results = run_sim(traffic_map, traveler_requests, f'sim2-{i}')
+        results['iteration'] = i
+        with open("out/sim2-results.txt", "a") as file:
+            file.write(str(results))
+
+    traffic_map, traveler_requests = prepare_sim_3(20)
+    for i in range(10):
+        results = run_sim(traffic_map, traveler_requests, f'sim3-{i}')
+        results['iteration'] = i
+        with open("out/sim3-results.txt", "a") as file:
+            file.write(str(results))
+

@@ -1,0 +1,10 @@
+[{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 6.9, 'gpt4o_median': 6.25, 'gpt35_mean': 29.175, 'gpt35_median': 10.75, 'iteration': 0},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 6.7, 'gpt4o_median': 6.0, 'gpt35_mean': 25.55, 'gpt35_median': 9.25, 'iteration': 1},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 5.916666666666667, 'gpt4o_median': 5.75, 'gpt35_mean': 21.166666666666668, 'gpt35_median': 9.25, 'iteration': 2},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 5.516666666666667, 'gpt4o_median': 4.5, 'gpt35_mean': 26.191666666666666, 'gpt35_median': 12.0, 'iteration': 3},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 6.166666666666667, 'gpt4o_median': 5.75, 'gpt35_mean': 29.35, 'gpt35_median': 9.25, 'iteration': 4},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 6.033333333333333, 'gpt4o_median': 5.5, 'gpt35_mean': 19.975, 'gpt35_median': 8.5, 'iteration': 5},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 5.766666666666667, 'gpt4o_median': 5.5, 'gpt35_mean': 33.80833333333333, 'gpt35_median': 12.5, 'iteration': 6},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 6.616666666666666, 'gpt4o_median': 6.0, 'gpt35_mean': 27.15, 'gpt35_median': 10.0, 'iteration': 7},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 6.7, 'gpt4o_median': 6.0, 'gpt35_mean': 21.241666666666667, 'gpt35_median': 9.0, 'iteration': 8},
+{'shortest_mean': 6.283333333333333, 'shortest_median': 5.0, 'gpt4o_mean': 5.883333333333334, 'gpt4o_median': 5.25, 'gpt35_mean': 23.041666666666668, 'gpt35_median': 9.25, 'iteration': 9}]
