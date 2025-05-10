@@ -768,21 +768,21 @@ def run_sim(traffic_map, traveler_requests, tag):
 if __name__ == "__main__":
 
     traffic_map, traveler_requests = prepare_sim_1(60)
-    for i in range(10):
+    for i in range(30):
         results = run_sim(traffic_map, traveler_requests, f'sim1-{i}')
         results['iteration'] = i
         with open("out/sim1-results.txt", "a") as file:
             file.write(str(results))
 
     traffic_map, traveler_requests = prepare_sim_2(10)
-    for i in range(10):
+    for i in range(30):
         results = run_sim(traffic_map, traveler_requests, f'sim2-{i}')
         results['iteration'] = i
         with open("out/sim2-results.txt", "a") as file:
             file.write(str(results))
 
     traffic_map, traveler_requests = prepare_sim_3(20)
-    for i in range(10):
+    for i in range(30):
         results = run_sim(traffic_map, traveler_requests, f'sim3-{i}')
         results['iteration'] = i
         with open("out/sim3-results.txt", "a") as file:
